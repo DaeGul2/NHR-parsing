@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -11,10 +11,13 @@ import {
   Box,
   FormControlLabel,
   Checkbox,
-  TextField
+  TextField,
+  CircularProgress
 } from '@mui/material';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+
+
 
 import FileUploader from './components/FileUploader';
 import SheetConfigurator from './components/SheetConfigurator';
@@ -84,6 +87,17 @@ function App() {
   const [sortRules, setSortRules] = useState({});         // { sheetName: { key: '정렬컬럼', method: 'desc'|'asc'|'alpha' } }
   const [groupColumnOrder, setGroupColumnOrder] = useState({});
 
+  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    if (step1Workbook) {
+      const sheets = step1Workbook.SheetNames.filter(name => name !== 'rawdata');
+      sheets.forEach(sheet => autoDetectGroupSets(sheet));
+    }
+  }, [step1Workbook]);
+
+
   // 사용자가 선택한 기준 컬럼 역할은 동일하지만, step1 결과물에선 "컬럼명"만 사용됨
   const baseColumns = ['지원자번호', '지원직무', '이름'];
 
@@ -115,6 +129,7 @@ function App() {
 
   // Step1: 엑셀 생성 및 다운로드, 내부에 Step2용 워크북 저장
   const generateStep1 = () => {
+    setLoading(true); // ✅ 로딩 시작
     const wb = XLSX.utils.book_new();
     const groupMap = {};
     headerRow.forEach((group, idx) => {
@@ -147,6 +162,8 @@ function App() {
     setStep1Workbook(newWb);
     // Step2 대상 시트: rawdata 제외
     setStep2Sheets(newWb.SheetNames.filter(name => name !== 'rawdata'));
+
+    setLoading(false); // ✅ 로딩 종료
   };
 
   // Step1에서 선택한 기준 컬럼의 인덱스를 통해, step1 결과물에 나온 "컬럼명"(서브컬럼)만 추출
@@ -207,6 +224,7 @@ function App() {
 
   // Step2: 최종 Step2 엑셀 생성 (generateStep2Excel 호출)
   const handleGenerateStep2 = () => {
+    setGenerating(true); // ✅ 로딩 시작
     // 각 시트에 대해 활성 그룹 세트만 전달하고, 최종 컬럼 순서를 계산하여 전달
     const activeGroupSetsForExcel = {};
     const finalColumnOrders = {};
@@ -225,6 +243,7 @@ function App() {
       // step1에서 선택한 기준컬럼(실제 서브컬럼명)을 그대로 사용
       idKeys: getIdKeyNames()
     });
+    setGenerating(false); // ✅ 로딩 종료
   };
 
   return (
