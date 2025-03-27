@@ -230,7 +230,7 @@ function App() {
   return (
     <Container>
       <Typography variant="h4" gutterBottom>
-        Excel Step1 + Step2 통합 파서
+        시트 분리 및 컬럼 세로화 작업
       </Typography>
       <FileUploader onUpload={handleUpload} />
 
