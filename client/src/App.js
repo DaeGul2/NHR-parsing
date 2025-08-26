@@ -10,19 +10,16 @@ import {
   Button,
   Box,
   FormControlLabel,
-  Checkbox,
-  TextField,
-  CircularProgress
+  Checkbox
 } from '@mui/material';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-
-
 
 import FileUploader from './components/FileUploader';
 import SheetConfigurator from './components/SheetConfigurator';
 import GenerateButton from './components/GenerateButton';
 import { generateStep2Excel } from './utils/generateStep2Excel';
+import NhrTransformModal from './components/NhrTransformModal';
 
 // 간단한 드래그앤드롭 리스트 컴포넌트 (스타일 개선)
 function DraggableList({ items, onOrderChange }) {
@@ -90,13 +87,15 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
 
+  // NHR 변환 모달
+  const [openNHR, setOpenNHR] = useState(false);
+
   useEffect(() => {
     if (step1Workbook) {
       const sheets = step1Workbook.SheetNames.filter(name => name !== 'rawdata');
       sheets.forEach(sheet => autoDetectGroupSets(sheet));
     }
   }, [step1Workbook]);
-
 
   // 사용자가 선택한 기준 컬럼 역할은 동일하지만, step1 결과물에선 "컬럼명"만 사용됨
   const baseColumns = ['지원자번호', '지원직무', '이름'];
@@ -251,14 +250,21 @@ function App() {
       <Typography variant="h4" gutterBottom>
         시트 분리 및 컬럼 세로화 작업
       </Typography>
-      <FileUploader onUpload={handleUpload} />
+
+      {/* 상단 버튼 줄: NHR 변환 + 엑셀 업로드 */}
+      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Button variant="outlined" onClick={() => setOpenNHR(true)}>
+          nhr 형식으로 엑셀 바꾸기
+        </Button>
+        <FileUploader onUpload={handleUpload} />
+      </Box>
 
       {/* Step1 영역 */}
       {groups.length > 0 && (
         <>
           <Divider sx={{ my: 2 }} />
           <Typography variant="h6">📌 기준 컬럼 선택 (Step1)</Typography>
-          {baseColumns.map((key) => (
+          {['지원자번호', '지원직무', '이름'].map((key) => (
             <FormControl fullWidth sx={{ my: 1 }} key={key}>
               <InputLabel>{key}</InputLabel>
               <Select value={idCols[key]} label={key} onChange={handleIdColChange(key)}>
@@ -390,6 +396,9 @@ function App() {
           </Button>
         </>
       )}
+
+      {/* NHR 변환 모달 */}
+      <NhrTransformModal open={openNHR} onClose={() => setOpenNHR(false)} />
     </Container>
   );
 }
