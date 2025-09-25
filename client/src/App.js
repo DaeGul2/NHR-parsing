@@ -21,6 +21,9 @@ import GenerateButton from './components/GenerateButton';
 import { generateStep2Excel } from './utils/generateStep2Excel';
 import NhrTransformModal from './components/NhrTransformModal';
 
+// ✅ 컬럼 병합 페이지 임포트
+import ColumnMergePage from './ColumnMergePage';
+
 // 간단한 드래그앤드롭 리스트 컴포넌트 (스타일 개선)
 function DraggableList({ items, onOrderChange }) {
   const [dragIndex, setDragIndex] = useState(null);
@@ -68,6 +71,9 @@ function DraggableList({ items, onOrderChange }) {
 }
 
 function App() {
+  // ✅ 컬럼 병합 페이지 토글
+  const [showColumnMerge, setShowColumnMerge] = useState(false);
+
   // Step1 관련 상태
   const [headerRow, setHeaderRow] = useState([]);
   const [rows, setRows] = useState([]);
@@ -245,18 +251,39 @@ function App() {
     setGenerating(false); // ✅ 로딩 종료
   };
 
+  // ✅ '컬럼 병합하기' 버튼을 누르면 병합 전용 화면으로 전환
+  if (showColumnMerge) {
+    return (
+      <Container sx={{ py: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+          <Button variant="outlined" onClick={() => setShowColumnMerge(false)}>
+            뒤로 가기
+          </Button>
+        </Box>
+        <Typography variant="h5" gutterBottom>
+          컬럼 병합 페이지
+        </Typography>
+        <ColumnMergePage />
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <Typography variant="h4" gutterBottom>
         시트 분리 및 컬럼 세로화 작업
       </Typography>
 
-      {/* 상단 버튼 줄: NHR 변환 + 엑셀 업로드 */}
+      {/* 상단 버튼 줄: NHR 변환 + 엑셀 업로드 + ✅ 컬럼 병합하기 */}
       <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
         <Button variant="outlined" onClick={() => setOpenNHR(true)}>
           nhr 형식으로 엑셀 바꾸기
         </Button>
         <FileUploader onUpload={handleUpload} />
+        {/* ✅ 컬럼 병합하기 버튼 */}
+        <Button variant="contained" color="primary" onClick={() => setShowColumnMerge(true)}>
+          컬럼 병합하기
+        </Button>
       </Box>
 
       {/* Step1 영역 */}
