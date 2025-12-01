@@ -10,7 +10,12 @@ import {
   Button,
   Box,
   FormControlLabel,
-  Checkbox
+  Checkbox,
+  Paper,
+  Grid,
+  Chip,
+  Stack,
+  Tooltip
 } from '@mui/material';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -46,26 +51,53 @@ function DraggableList({ items, onOrderChange }) {
   };
 
   return (
-    <Box sx={{ border: '1px dashed #aaa', p: 2, borderRadius: 1 }}>
-      {items.map((item, index) => (
-        <Box
-          key={index}
-          draggable
-          onDragStart={() => handleDragStart(index)}
-          onDragOver={(e) => handleDragOver(index, e)}
-          onDrop={() => handleDrop(index)}
-          sx={{
-            p: 1,
-            border: '1px solid #ccc',
-            mb: 1,
-            borderRadius: 1,
-            backgroundColor: '#f7f7f7',
-            cursor: 'grab'
-          }}
-        >
-          {item}
-        </Box>
-      ))}
+    <Box
+      sx={{
+        borderRadius: 2,
+        border: '1px dashed',
+        borderColor: 'divider',
+        p: 1.5,
+        background:
+          'linear-gradient(135deg, rgba(144,202,249,0.06), rgba(206,147,216,0.06))'
+      }}
+    >
+      <Stack direction="row" flexWrap="wrap" gap={1}>
+        {items.map((item, index) => (
+          <Box
+            key={index}
+            draggable
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(index, e)}
+            onDrop={() => handleDrop(index)}
+            sx={{
+              px: 1.5,
+              py: 0.75,
+              borderRadius: 999,
+              border: '1px solid',
+              borderColor: dragIndex === index ? 'primary.main' : 'divider',
+              backgroundColor:
+                dragIndex === index ? 'primary.light' : 'background.paper',
+              boxShadow: dragIndex === index ? 2 : 0,
+              cursor: 'grab',
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.75
+            }}
+          >
+            <Box
+              component="span"
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: 'primary.main'
+              }}
+            />
+            {item}
+          </Box>
+        ))}
+      </Stack>
     </Box>
   );
 }
@@ -254,174 +286,394 @@ function App() {
   // ✅ '컬럼 병합하기' 버튼을 누르면 병합 전용 화면으로 전환
   if (showColumnMerge) {
     return (
-      <Container sx={{ py: 2 }}>
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 2,
+            mb: 3,
+            borderRadius: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5
+          }}
+        >
           <Button variant="outlined" onClick={() => setShowColumnMerge(false)}>
             뒤로 가기
           </Button>
-        </Box>
-        <Typography variant="h5" gutterBottom>
-          컬럼 병합 페이지
-        </Typography>
-        <ColumnMergePage />
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            컬럼 병합 페이지
+          </Typography>
+        </Paper>
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <ColumnMergePage />
+        </Paper>
       </Container>
     );
   }
 
   return (
-    <Container>
-      <Typography variant="h4" gutterBottom>
-        시트 분리 및 컬럼 세로화 작업
-      </Typography>
+    <Container
+      maxWidth="lg"
+      sx={{
+        py: 4,
+        pb: 6
+      }}
+    >
+      {/* 헤더 카드 */}
+      <Paper
+        elevation={3}
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 3,
+          background:
+            'linear-gradient(135deg, rgba(33,150,243,0.12), rgba(156,39,176,0.12))',
+          border: '1px solid',
+          borderColor: 'divider'
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 2,
+            flexWrap: 'wrap'
+          }}
+        >
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 800, mb: 1 }}>
+              시트 분리 & 컬럼 세로화 도구
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              지원자 기본 정보는 유지하면서, 그룹별 컬럼을 자동으로 나누고 세로화할 수 있는 작업용
+              화면입니다.
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
+            <Chip label="Step1 · 시트 분리" size="small" color="primary" variant="outlined" />
+            <Chip label="Step2 · 세로화 / 정렬" size="small" color="secondary" variant="outlined" />
+            <Chip label="NHR 포맷 변환" size="small" variant="outlined" />
+          </Stack>
+        </Box>
+      </Paper>
 
-      {/* 상단 버튼 줄: NHR 변환 + 엑셀 업로드 + ✅ 컬럼 병합하기 */}
-      <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-        <Button variant="outlined" onClick={() => setOpenNHR(true)}>
-          nhr 형식으로 엑셀 바꾸기
-        </Button>
-        <FileUploader onUpload={handleUpload} />
+      {/* 상단 액션 영역 */}
+      <Paper
+        elevation={1}
+        sx={{
+          p: 2,
+          mb: 3,
+          borderRadius: 3,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 1.5,
+          backgroundColor: 'background.paper'
+        }}
+      >
+        <Tooltip title="NHR 양식으로 가공된 엑셀 파일이 필요할 때 사용">
+          <Button variant="outlined" onClick={() => setOpenNHR(true)}>
+            NHR 형식으로 엑셀 바꾸기
+          </Button>
+        </Tooltip>
+
+        <Tooltip title="원본 엑셀 업로드 (Step1 기준)">
+          <Box>
+            <FileUploader onUpload={handleUpload} />
+          </Box>
+        </Tooltip>
+
         {/* ✅ 컬럼 병합하기 버튼 */}
-        <Button variant="contained" color="primary" onClick={() => setShowColumnMerge(true)}>
-          컬럼 병합하기
-        </Button>
-      </Box>
+        <Tooltip title="별도 페이지에서 복수 컬럼을 한 컬럼으로 병합">
+          <Button variant="contained" color="primary" onClick={() => setShowColumnMerge(true)}>
+            컬럼 병합하기
+          </Button>
+        </Tooltip>
+
+        <Box sx={{ flexGrow: 1 }} />
+
+        {(loading || generating) && (
+          <Typography variant="body2" color="text.secondary">
+            {loading ? 'Step1 엑셀 생성 중...' : 'Step2 엑셀 생성 중...'}
+          </Typography>
+        )}
+      </Paper>
 
       {/* Step1 영역 */}
       {groups.length > 0 && (
-        <>
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 3,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Step1 · 기준 컬럼 선택 & 시트 분리
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                지원자번호 / 지원직무 / 이름에 해당하는 열을 지정한 후, 그룹 단위로 시트를 나눕니다.
+              </Typography>
+            </Box>
+            <Chip
+              label="원본 시트 → 그룹별 시트"
+              size="small"
+              color="primary"
+              variant="outlined"
+            />
+          </Box>
+
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                기준 컬럼 선택
+              </Typography>
+              {['지원자번호', '지원직무', '이름'].map((key) => (
+                <FormControl fullWidth sx={{ my: 1 }} key={key} size="small">
+                  <InputLabel>{key}</InputLabel>
+                  <Select value={idCols[key]} label={key} onChange={handleIdColChange(key)}>
+                    {headerRow.map((group, idx) => {
+                      const secondRowValue = rows[0]?.[idx] || '(값 없음)';
+                      return (
+                        <MenuItem key={idx} value={idx}>
+                          {`${group || '그룹없음'}: ${secondRowValue}`}
+                        </MenuItem>
+                      );
+                    })}
+                  </Select>
+                </FormControl>
+              ))}
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                시트로 분리할 그룹 선택
+              </Typography>
+              <SheetConfigurator
+                headers={headerRow}
+                selected={selectedGroups}
+                setSelected={setSelectedGroups}
+              />
+            </Grid>
+          </Grid>
+
           <Divider sx={{ my: 2 }} />
-          <Typography variant="h6">📌 기준 컬럼 선택 (Step1)</Typography>
-          {['지원자번호', '지원직무', '이름'].map((key) => (
-            <FormControl fullWidth sx={{ my: 1 }} key={key}>
-              <InputLabel>{key}</InputLabel>
-              <Select value={idCols[key]} label={key} onChange={handleIdColChange(key)}>
-                {headerRow.map((group, idx) => {
-                  const secondRowValue = rows[0]?.[idx] || '(값 없음)';
-                  return (
-                    <MenuItem key={idx} value={idx}>
-                      {`${group || '그룹없음'}: ${secondRowValue}`}
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
-          ))}
-          <Divider sx={{ my: 2 }} />
-          <SheetConfigurator
-            headers={headerRow}
-            selected={selectedGroups}
-            setSelected={setSelectedGroups}
-          />
-          <GenerateButton onClick={generateStep1} />
-        </>
+
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <GenerateButton onClick={generateStep1} />
+          </Box>
+        </Paper>
       )}
 
       {/* Step2 영역 */}
       {step1Workbook && (
-        <>
-          <Divider sx={{ my: 3 }} />
-          <Typography variant="h5">Step2: 시트 세로화 설정</Typography>
-          {step1Workbook.SheetNames.filter(name => name !== 'rawdata').map((sheetName) => (
-            <Box key={sheetName} sx={{ my: 2, border: '1px solid #ccc', p: 2 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={step2Sheets.includes(sheetName)}
-                    onChange={() => handleStep2SheetToggle(sheetName)}
-                  />
-                }
-                label={sheetName}
-              />
-              {step2Sheets.includes(sheetName) && (
-                <>
-                  <Box sx={{ mt: 1 }}>
-                    <Button size="small" onClick={() => autoDetectGroupSets(sheetName)}>
-                      자동 그룹 감지
-                    </Button>
-                  </Box>
-                  {groupSets[sheetName] && groupSets[sheetName].length > 0 && (
-                    <Box sx={{ mt: 1 }}>
-                      <FormControl fullWidth>
-                        <InputLabel>활성 그룹 세트 선택</InputLabel>
-                        <Select
-                          value={activeGroupSet[sheetName] !== undefined ? activeGroupSet[sheetName] : ''}
-                          label="활성 그룹 세트 선택"
-                          onChange={(e) => {
-                            const index = parseInt(e.target.value, 10);
-                            setActiveGroupSet(prev => ({ ...prev, [sheetName]: index }));
-                            const newOrder = groupSets[sheetName][index].map(col => col.replace(/\d+$/, ''));
-                            setGroupColumnOrder(prev => ({ ...prev, [sheetName]: newOrder }));
-                          }}
-                        >
-                          {groupSets[sheetName].map((set, idx) => (
-                            <MenuItem key={idx} value={idx}>
-                              세트 {idx + 1}: [ {set.join(', ')} ]
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      {groupColumnOrder[sheetName] && (
-                        <>
-                          <Typography variant="body2" sx={{ mt: 1 }}>
-                            최종 그룹 컬럼 순서 (기본정보 뒤에 배치됨):
-                          </Typography>
-                          <DraggableList
-                            items={groupColumnOrder[sheetName]}
-                            onOrderChange={(newOrder) => handleGroupColumnOrderChange(sheetName, newOrder)}
-                          />
-                        </>
-                      )}
-                    </Box>
-                  )}
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2">정렬 기준 선택 (선택 사항)</Typography>
-                    <FormControl fullWidth sx={{ mt: 1 }}>
-                      <InputLabel>정렬 기준 컬럼</InputLabel>
-                      <Select
-                        value={sortRules[sheetName]?.key || ''}
-                        label="정렬 기준 컬럼"
-                        onChange={(e) =>
-                          handleSortRuleChange(
-                            sheetName,
-                            e.target.value,
-                            sortRules[sheetName]?.method || ''
-                          )
-                        }
-                      >
-                        <MenuItem value="">정렬 안 함</MenuItem>
-                        {getFinalColumnOrder(sheetName).map(col => (
-                          <MenuItem key={col} value={col}>{col}</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <FormControl fullWidth sx={{ mt: 1 }}>
-                      <InputLabel>정렬 방식</InputLabel>
-                      <Select
-                        value={sortRules[sheetName]?.method || ''}
-                        label="정렬 방식"
-                        onChange={(e) =>
-                          handleSortRuleChange(
-                            sheetName,
-                            sortRules[sheetName]?.key || '',
-                            e.target.value
-                          )
-                        }
-                      >
-                        <MenuItem value="">정렬 안 함</MenuItem>
-                        <MenuItem value="desc">내림차순</MenuItem>
-                        <MenuItem value="asc">오름차순</MenuItem>
-                        <MenuItem value="alpha">가나다순</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Box>
-                </>
-              )}
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                Step2 · 시트 세로화 설정
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                사용할 시트를 선택하고, 반복되는 컬럼을 세트로 묶어 세로화한 뒤 정렬 기준까지 지정할 수
+                있습니다.
+              </Typography>
             </Box>
-          ))}
-          <Button variant="contained" color="secondary" onClick={handleGenerateStep2}>
-            Step2 엑셀 생성
-          </Button>
-        </>
+            <Chip
+              label="그룹 컬럼 → 세로 레코드"
+              size="small"
+              color="secondary"
+              variant="outlined"
+            />
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {step1Workbook.SheetNames.filter(name => name !== 'rawdata').map((sheetName) => (
+              <Paper
+                key={sheetName}
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  backgroundColor: 'background.default'
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1
+                  }}
+                >
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={step2Sheets.includes(sheetName)}
+                        onChange={() => handleStep2SheetToggle(sheetName)}
+                      />
+                    }
+                    label={
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                        {sheetName}
+                      </Typography>
+                    }
+                  />
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="caption" color="text.secondary">
+                      기준 컬럼 순서:
+                    </Typography>
+                    <Stack direction="row" spacing={0.5}>
+                      {getFinalColumnOrder(sheetName).slice(0, 3).map(col => (
+                        <Chip key={col} label={col} size="small" variant="outlined" />
+                      ))}
+                      {getFinalColumnOrder(sheetName).length > 3 && (
+                        <Chip
+                          label={`+${getFinalColumnOrder(sheetName).length - 3}`}
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Stack>
+                  </Stack>
+                </Box>
+
+                {step2Sheets.includes(sheetName) && (
+                  <Box sx={{ mt: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="subtitle2">그룹 세트 설정</Typography>
+                      <Button size="small" onClick={() => autoDetectGroupSets(sheetName)}>
+                        자동 그룹 감지
+                      </Button>
+                    </Box>
+
+                    {groupSets[sheetName] && groupSets[sheetName].length > 0 && (
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} md={6}>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>활성 그룹 세트 선택</InputLabel>
+                            <Select
+                              value={
+                                activeGroupSet[sheetName] !== undefined
+                                  ? activeGroupSet[sheetName]
+                                  : ''
+                              }
+                              label="활성 그룹 세트 선택"
+                              onChange={(e) => {
+                                const index = parseInt(e.target.value, 10);
+                                setActiveGroupSet(prev => ({ ...prev, [sheetName]: index }));
+                                const newOrder = groupSets[sheetName][index].map(col =>
+                                  col.replace(/\d+$/, '')
+                                );
+                                setGroupColumnOrder(prev => ({ ...prev, [sheetName]: newOrder }));
+                              }}
+                            >
+                              {groupSets[sheetName].map((set, idx) => (
+                                <MenuItem key={idx} value={idx}>
+                                  세트 {idx + 1}: [ {set.join(', ')} ]
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+
+                          {groupColumnOrder[sheetName] && (
+                            <Box sx={{ mt: 2 }}>
+                              <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                최종 그룹 컬럼 순서 (기본정보 뒤에 배치됨)
+                              </Typography>
+                              <DraggableList
+                                items={groupColumnOrder[sheetName]}
+                                onOrderChange={(newOrder) =>
+                                  handleGroupColumnOrderChange(sheetName, newOrder)
+                                }
+                              />
+                            </Box>
+                          )}
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                            정렬 옵션
+                          </Typography>
+                          <FormControl fullWidth size="small" sx={{ mb: 1 }}>
+                            <InputLabel>정렬 기준 컬럼</InputLabel>
+                            <Select
+                              value={sortRules[sheetName]?.key || ''}
+                              label="정렬 기준 컬럼"
+                              onChange={(e) =>
+                                handleSortRuleChange(
+                                  sheetName,
+                                  e.target.value,
+                                  sortRules[sheetName]?.method || ''
+                                )
+                              }
+                            >
+                              <MenuItem value="">정렬 안 함</MenuItem>
+                              {getFinalColumnOrder(sheetName).map(col => (
+                                <MenuItem key={col} value={col}>
+                                  {col}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <FormControl fullWidth size="small">
+                            <InputLabel>정렬 방식</InputLabel>
+                            <Select
+                              value={sortRules[sheetName]?.method || ''}
+                              label="정렬 방식"
+                              onChange={(e) =>
+                                handleSortRuleChange(
+                                  sheetName,
+                                  sortRules[sheetName]?.key || '',
+                                  e.target.value
+                                )
+                              }
+                            >
+                              <MenuItem value="">정렬 안 함</MenuItem>
+                              <MenuItem value="desc">내림차순</MenuItem>
+                              <MenuItem value="asc">오름차순</MenuItem>
+                              <MenuItem value="alpha">가나다순</MenuItem>
+                            </Select>
+                          </FormControl>
+                        </Grid>
+                      </Grid>
+                    )}
+                  </Box>
+                )}
+              </Paper>
+            ))}
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={handleGenerateStep2}
+                disabled={generating}
+              >
+                Step2 엑셀 생성
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
       )}
 
       {/* NHR 변환 모달 */}
