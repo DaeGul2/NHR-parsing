@@ -51,14 +51,27 @@ export function generateStep2Excel({
 
         // groupSets가 전달된 경우, 활성 그룹 세트의 첫번째 열을 기준으로 값이 있는지 확인
         const primary = groupSets[sheetName]?.[0]?.[0]?.replace(/[0-9]+$/, '');
-        if (primary && !set[primary]) return;
+        const primaryVal = primary ? set[primary] : undefined;
+        const hasPrimary = primaryVal && String(primaryVal).trim() !== '-';
+
+        // 이 셋 안에 실제 값이 하나라도 있는지 (빈 문자열/ '-' 만 있는 경우는 없음으로 처리)
+        const hasAnyValue = Object.values(set).some((v) => {
+          const s = (v ?? '').toString().trim();
+          return s && s !== '-';
+        });
+
+        // 모든 셀이 '-' 또는 공백이면 이 슬롯은 아예 행을 만들지 않음
+        if (!hasAnyValue) return;
+
+        // primary가 정의돼 있으면 primary 기준으로도 한 번 더 필터
+        if (primary && !hasPrimary) return;
 
         flattened.push({ ...common, ...set });
         added = true;
       });
 
-      // 그룹 세트에 속하지 않는 경우, columnOrders에 정의된 열들에 대해 '기재 사항 없음'을 넣음
-      // 단, 기준 컬럼 및 연번은 제외
+      // 그룹 세트에 속하지 않거나, 모든 셋이 비어있어서 한 행도 추가되지 않은 경우
+      // => columnOrders에 정의된 열들에 대해 '기재 사항 없음'을 넣은 한 줄만 생성
       if (!added) {
         const blank = {};
         columnOrders[sheetName].forEach(col => {
