@@ -29,6 +29,9 @@ import NhrTransformModal from './components/NhrTransformModal';
 // ✅ 컬럼 병합 페이지 임포트
 import ColumnMergePage from './ColumnMergePage';
 
+// ✅ 세로화 도구 페이지 임포트
+import VerticalTransformPage from './VerticalTransformPage';
+
 // 간단한 드래그앤드롭 리스트 컴포넌트 (스타일 개선)
 function DraggableList({ items, onOrderChange }) {
   const [dragIndex, setDragIndex] = useState(null);
@@ -105,6 +108,9 @@ function DraggableList({ items, onOrderChange }) {
 function App() {
   // ✅ 컬럼 병합 페이지 토글
   const [showColumnMerge, setShowColumnMerge] = useState(false);
+
+  // ✅ 세로화 도구 페이지 토글
+  const [showVerticalTransform, setShowVerticalTransform] = useState(false);
 
   // Step1 관련 상태
   const [headerRow, setHeaderRow] = useState([]);
@@ -283,6 +289,42 @@ function App() {
     setGenerating(false); // ✅ 로딩 종료
   };
 
+  // ✅ '세로화 도구' 버튼을 누르면 세로화 전용 화면으로 전환
+  if (showVerticalTransform) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 2,
+            mb: 3,
+            borderRadius: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5
+          }}
+        >
+          <Button variant="outlined" onClick={() => setShowVerticalTransform(false)}>
+            뒤로 가기
+          </Button>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            세로화 도구
+          </Typography>
+        </Paper>
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <VerticalTransformPage />
+        </Paper>
+      </Container>
+    );
+  }
+
   // ✅ '컬럼 병합하기' 버튼을 누르면 병합 전용 화면으로 전환
   if (showColumnMerge) {
     return (
@@ -396,6 +438,13 @@ function App() {
         <Tooltip title="별도 페이지에서 복수 컬럼을 한 컬럼으로 병합">
           <Button variant="contained" color="primary" onClick={() => setShowColumnMerge(true)}>
             컬럼 병합하기
+          </Button>
+        </Tooltip>
+
+        {/* ✅ 세로화 도구 버튼 */}
+        <Tooltip title="클릭으로 범위 선택 → 자동 패턴 감지 → 세로화">
+          <Button variant="contained" color="secondary" onClick={() => setShowVerticalTransform(true)}>
+            세로화 도구
           </Button>
         </Tooltip>
 
