@@ -139,7 +139,7 @@ function App() {
       const sheets = step1Workbook.SheetNames.filter(name => name !== 'rawdata');
       sheets.forEach(sheet => autoDetectGroupSets(sheet));
     }
-  }, [step1Workbook]);
+  }, [step1Workbook, autoDetectGroupSets]);
 
   // 사용자가 선택한 기준 컬럼 역할은 동일하지만, step1 결과물에선 "컬럼명"만 사용됨
   const baseColumns = ['지원자번호', '지원직무', '이름'];

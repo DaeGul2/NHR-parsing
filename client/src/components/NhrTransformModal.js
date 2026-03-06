@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import {
   Dialog, AppBar, Toolbar, IconButton, Typography, Button,
-  Box, ListItem, Checkbox, TextField, Divider, Paper,
+  Box, Checkbox, TextField, Divider, Paper,
   Chip, Stack, Tooltip
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
