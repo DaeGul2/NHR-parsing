@@ -339,44 +339,6 @@ export default function NhrTransformModal({ open, onClose }) {
     // setSubNamesCSV('');
   }, [setBaseName, subNames, selectedIdx]);
 
-  /** 우측 미리보기 (메모) */
-  const previewRight = useMemo(() => {
-    const items = [];
-
-    // 그룹
-    for (let gi = 0; gi < groups.length; gi++) {
-      const g = groups[gi];
-      items.push({
-        type: 'group',
-        key: `group-${gi}`,
-        title: g.name,
-        cols: g.indices.map((i) => masterHeaders[i] ?? `열${i + 1}`),
-      });
-    }
-
-    // 세트
-    for (let si = 0; si < sets.length; si++) {
-      const s = sets[si];
-      const all = [];
-      for (let ci = 0; ci < s.chunks.length; ci++) {
-        const ch = s.chunks[ci];
-        for (let j = 0; j < ch.indices.length; j++) {
-          const colIdx = ch.indices[j];
-          const oldName = masterHeaders[colIdx] ?? `열${colIdx + 1}`;
-          const newName = ch.newHeaders[j];
-          all.push(`${oldName} → ${newName}`);
-        }
-      }
-      items.push({
-        type: 'set',
-        key: `set-${si}`,
-        title: s.baseName,
-        cols: all,
-      });
-    }
-
-    return items;
-  }, [groups, sets, masterHeaders]);
 
   /** 내보내기: 선택된 컬럼만, 두 줄 헤더 + 병합 */
   const handleDownload = useCallback(() => {

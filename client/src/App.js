@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -134,13 +134,6 @@ function App() {
   // NHR 변환 모달
   const [openNHR, setOpenNHR] = useState(false);
 
-  useEffect(() => {
-    if (step1Workbook) {
-      const sheets = step1Workbook.SheetNames.filter(name => name !== 'rawdata');
-      sheets.forEach(sheet => autoDetectGroupSets(sheet));
-    }
-  }, [step1Workbook, autoDetectGroupSets]);
-
   // 사용자가 선택한 기준 컬럼 역할은 동일하지만, step1 결과물에선 "컬럼명"만 사용됨
   const baseColumns = ['지원자번호', '지원직무', '이름'];
 
@@ -226,7 +219,7 @@ function App() {
 
   // Step2: 각 시트별 자동 그룹 감지
   // 조건: 반복되는 컬럼명이 문자+숫자로 연속되는 경우 그룹화 (기본정보, 연번 제외)
-  const autoDetectGroupSets = (sheetName) => {
+  const autoDetectGroupSets = useCallback((sheetName) => {
     const sheet = step1Workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(sheet, { defval: '' });
     const allCols = Object.keys(data[0] || {});
@@ -248,7 +241,15 @@ function App() {
       const detected = grouped[0].map(col => col.replace(/\d+$/, ''));
       setGroupColumnOrder(prev => ({ ...prev, [sheetName]: detected }));
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step1Workbook]);
+
+  useEffect(() => {
+    if (step1Workbook) {
+      const sheets = step1Workbook.SheetNames.filter(name => name !== 'rawdata');
+      sheets.forEach(sheet => autoDetectGroupSets(sheet));
+    }
+  }, [step1Workbook, autoDetectGroupSets]);
 
   // Step2: 그룹 컬럼 순서 재정렬 (드래그앤드롭)
   const handleGroupColumnOrderChange = (sheet, newOrder) => {
