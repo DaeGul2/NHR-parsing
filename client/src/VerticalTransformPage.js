@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Box, Paper, Typography, Button, Chip, Stack,
   Table, TableHead, TableBody, TableRow, TableCell,
@@ -188,12 +188,13 @@ export default function VerticalTransformPage() {
   // 다운로드 형식
   const [downloadFormat, setDownloadFormat] = useState('simple');
   const [alertMsg, setAlertMsg] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   const baseIndicesSet = useMemo(() => new Set(baseIndices), [baseIndices]);
 
   /* ── 파일 업로드 ── */
-  const handleFileUpload = useCallback((e) => {
-    const file = e.target.files?.[0];
+  const processFile = useCallback((file) => {
     if (!file) return;
     setFileName(file.name.replace(/\.[^.]+$/, ''));
     const reader = new FileReader();
@@ -243,6 +244,18 @@ export default function VerticalTransformPage() {
     };
     reader.readAsArrayBuffer(file);
   }, []);
+
+  const handleFileInput = useCallback((e) => {
+    processFile(e.target.files?.[0]);
+  }, [processFile]);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && /\.(xlsx|xls|csv)$/i.test(file.name)) processFile(file);
+  }, [processFile]);
 
   const handleReset = useCallback(() => {
     setHeaders([]); setSampleRow([]); setAllRows([]); setFileName('');
@@ -356,7 +369,7 @@ export default function VerticalTransformPage() {
   /* ── 세트별 세로화 함수 ── */
   const verticalizeOneSet = useCallback((info) => {
     const { range: r, setSize, numSets, cleanNames } = info;
-    const outHeaders = [...baseIndices.map(i => headers[i]), '연번', ...cleanNames];
+    const outHeaders = ['지원자 연번', ...baseIndices.map(i => headers[i]), '연번', ...cleanNames];
 
     const flattened = [];
     allRows.forEach(row => {
@@ -382,16 +395,18 @@ export default function VerticalTransformPage() {
       }
     });
 
-    // 그룹핑 → 정렬 → 연번
+    // 그룹핑 → 정렬 → 연번 + 지원자 연번
     const grouped = {};
+    const groupOrder = [];
     flattened.forEach(item => {
       const k = item.key ?? '';
-      if (!grouped[k]) grouped[k] = [];
+      if (!grouped[k]) { grouped[k] = []; groupOrder.push(k); }
       grouped[k].push(item);
     });
 
     const outRows = [];
-    Object.values(grouped).forEach(group => {
+    groupOrder.forEach((key, personIdx) => {
+      const group = grouped[key];
       if (r.sortKey && r.sortMethod) {
         const idx = cleanNames.indexOf(r.sortKey);
         if (idx >= 0) {
@@ -406,7 +421,7 @@ export default function VerticalTransformPage() {
           });
         }
       }
-      group.forEach((item, i) => outRows.push([...item.base, i + 1, ...item.vals]));
+      group.forEach((item, i) => outRows.push([personIdx + 1, ...item.base, i + 1, ...item.vals]));
     });
 
     return { outHeaders, outRows, info };
@@ -417,13 +432,25 @@ export default function VerticalTransformPage() {
     if (setInfos.length === 0) return;
     const wb = XLSX.utils.book_new();
 
-    setInfos.forEach(info => {
+    // 시트명 중복 처리: 같은 이름이 2개 이상이면 전부 번호 부여
+    const rawNames = setInfos.map(info => info.groupName.slice(0, 31) || '시트');
+    const nameCount = {};
+    rawNames.forEach(n => { nameCount[n] = (nameCount[n] || 0) + 1; });
+    const nameIdx = {};
+    const sheetNames = rawNames.map(n => {
+      if (nameCount[n] <= 1) return n;
+      nameIdx[n] = (nameIdx[n] || 0) + 1;
+      return `${n.slice(0, 28)}${nameIdx[n]}`;
+    });
+
+    setInfos.forEach((info, sheetIdx) => {
       const { outHeaders, outRows } = verticalizeOneSet(info);
-      const sheetName = info.groupName.slice(0, 31) || '시트';
+      const sheetName = sheetNames[sheetIdx];
 
       if (downloadFormat === 'nhr') {
         // 2행 헤더 + 병합
         const topHeader = [];
+        topHeader.push('기본정보'); // 지원자 연번
         baseIndices.forEach(() => topHeader.push('기본정보'));
         topHeader.push('기본정보'); // 연번
         info.cleanNames.forEach(() => topHeader.push(info.groupName));
@@ -467,18 +494,38 @@ export default function VerticalTransformPage() {
   return (
     <Box>
       {/* 파일 업로드 */}
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-        <Button variant="contained" component="label">
-          엑셀 업로드
-          <input type="file" hidden accept=".xlsx,.xls,.csv" onChange={handleFileUpload} />
-        </Button>
-        {fileName && (
-          <>
-            <Chip label={fileName} variant="outlined" />
-            <Button size="small" color="error" onClick={handleReset}>초기화</Button>
-          </>
-        )}
-      </Stack>
+      <Box
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); }}
+        onDrop={handleDrop}
+        sx={{
+          border: '2px dashed',
+          borderColor: dragging ? 'primary.main' : 'divider',
+          borderRadius: 2,
+          p: 2,
+          mb: 3,
+          textAlign: 'center',
+          backgroundColor: dragging ? 'action.hover' : 'transparent',
+          transition: 'all 0.2s',
+        }}
+      >
+        <Stack direction="row" spacing={2} alignItems="center" justifyContent="center">
+          <Button variant="contained" component="label">
+            엑셀 업로드
+            <input ref={fileInputRef} type="file" hidden accept=".xlsx,.xls,.csv" onChange={handleFileInput} />
+          </Button>
+          {fileName ? (
+            <>
+              <Chip label={fileName} variant="outlined" />
+              <Button size="small" color="error" onClick={handleReset}>초기화</Button>
+            </>
+          ) : (
+            <Typography variant="caption" color="text.secondary">
+              또는 파일을 여기에 드래그
+            </Typography>
+          )}
+        </Stack>
+      </Box>
 
       {headers.length > 0 && (
         <>

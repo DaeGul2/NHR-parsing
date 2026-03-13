@@ -452,15 +452,38 @@ export default function NhrTransformModal({ open, onClose }) {
         {/* 좌측 패널 */}
         <Paper sx={{ width: '40%', p: 2, display: 'flex', flexDirection: 'column', overflow: 'hidden', gap: 1 }}>
           <Typography variant="h6">1) 엑셀 업로드</Typography>
-          <Button variant="outlined" component="label" sx={{ mb: 1 }}>
-            엑셀 선택
-            <input
-              type="file"
-              hidden
-              accept=".xlsx"
-              onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
-            />
-          </Button>
+          <Box
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const file = e.dataTransfer.files?.[0];
+              if (file && /\.(xlsx|xls|csv)$/i.test(file.name)) handleUpload(file);
+            }}
+            sx={{
+              border: '2px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+              p: 1.5,
+              mb: 1,
+              textAlign: 'center',
+              '&:hover': { borderColor: 'primary.main' },
+              transition: 'all 0.2s',
+            }}
+          >
+            <Button variant="outlined" component="label">
+              엑셀 선택
+              <input
+                type="file"
+                hidden
+                accept=".xlsx,.xls,.csv"
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+              />
+            </Button>
+            <Typography variant="caption" display="block" sx={{ mt: 0.5, color: 'text.secondary' }}>
+              또는 파일을 여기에 드래그
+            </Typography>
+          </Box>
 
           <Divider />
 

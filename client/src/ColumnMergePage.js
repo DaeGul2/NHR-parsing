@@ -145,14 +145,13 @@ export default function ColumnMergePage() {
   const [openSetNames, setOpenSetNames] = useState(new Set());
   const [setSelection, setSetSelection] = useState(new Set());
   const [fieldSelection, setFieldSelection] = useState({});
+  const [dragging, setDragging] = useState(false);
 
   const fileInputRef = useRef(null);
 
-  /** 파일 업로드 */
-  const onFile = async (e) => {
-    const f = e.target.files?.[0];
+  /** 파일 처리 공통 */
+  const processFile = async (f) => {
     if (!f) return;
-
     const { headers, rows } = await readTableFromFile(f);
     const cls = classifyHeaders(headers);
 
@@ -167,6 +166,20 @@ export default function ColumnMergePage() {
     setOpenSetNames(new Set());
     setSetSelection(new Set());
     setFieldSelection({});
+  };
+
+  /** 파일 업로드 */
+  const onFile = async (e) => {
+    processFile(e.target.files?.[0]);
+  };
+
+  /** 드래그 앤 드롭 */
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && /\.(xlsx|xls|csv)$/i.test(file.name)) processFile(file);
   };
 
   /** 좌측 토글/삭제/리셋 */
@@ -368,8 +381,20 @@ export default function ColumnMergePage() {
     <div className="wrap">
       <style>{styles}</style>
 
-      <div className="topbar">
+      <div
+        className="topbar"
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(true); }}
+        onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragging(false); }}
+        onDrop={onDrop}
+        style={{
+          border: dragging ? '2px dashed #1976d2' : '2px dashed transparent',
+          borderRadius: 8,
+          backgroundColor: dragging ? 'rgba(25,118,210,0.06)' : 'transparent',
+          transition: 'all 0.2s',
+        }}
+      >
         <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={onFile} />
+        <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>또는 파일을 여기에 드래그</span>
         <button
           className="btn"
           onClick={() => {
