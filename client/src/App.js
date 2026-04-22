@@ -32,6 +32,12 @@ import ColumnMergePage from './ColumnMergePage';
 // ✅ 세로화 도구 페이지 임포트
 import VerticalTransformPage from './VerticalTransformPage';
 
+// ✅ NHR 전처리 페이지 임포트
+import NhrPreprocessPage from './NhrPreprocessPage';
+
+// ✅ 마이다스 전처리 페이지 임포트
+import MidasPreprocessPage from './MidasPreprocessPage';
+
 // 간단한 드래그앤드롭 리스트 컴포넌트 (스타일 개선)
 function DraggableList({ items, onOrderChange }) {
   const [dragIndex, setDragIndex] = useState(null);
@@ -111,6 +117,12 @@ function App() {
 
   // ✅ 세로화 도구 페이지 토글
   const [showVerticalTransform, setShowVerticalTransform] = useState(false);
+
+  // ✅ NHR 전처리 페이지 토글
+  const [showNhrPreprocess, setShowNhrPreprocess] = useState(false);
+
+  // ✅ 마이다스 전처리 페이지 토글
+  const [showMidasPreprocess, setShowMidasPreprocess] = useState(false);
 
   // Step1 관련 상태
   const [headerRow, setHeaderRow] = useState([]);
@@ -290,6 +302,78 @@ function App() {
     setGenerating(false); // ✅ 로딩 종료
   };
 
+  // ✅ '마이다스 전처리' 버튼을 누르면 마이다스 전처리 전용 화면으로 전환
+  if (showMidasPreprocess) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 2,
+            mb: 3,
+            borderRadius: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5
+          }}
+        >
+          <Button variant="outlined" onClick={() => setShowMidasPreprocess(false)}>
+            뒤로 가기
+          </Button>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            마이다스 전처리
+          </Typography>
+        </Paper>
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <MidasPreprocessPage />
+        </Paper>
+      </Container>
+    );
+  }
+
+  // ✅ 'NHR 형식 엑셀 업로드' 버튼을 누르면 NHR 전처리 전용 화면으로 전환
+  if (showNhrPreprocess) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: 2,
+            mb: 3,
+            borderRadius: 3,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5
+          }}
+        >
+          <Button variant="outlined" onClick={() => setShowNhrPreprocess(false)}>
+            뒤로 가기
+          </Button>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>
+            NHR 전처리
+          </Typography>
+        </Paper>
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            backgroundColor: 'background.paper'
+          }}
+        >
+          <NhrPreprocessPage />
+        </Paper>
+      </Container>
+    );
+  }
+
   // ✅ '세로화 도구' 버튼을 누르면 세로화 전용 화면으로 전환
   if (showVerticalTransform) {
     return (
@@ -410,53 +494,90 @@ function App() {
       </Paper>
 
       {/* 상단 액션 영역 */}
+      {/* ▼ NHR 섹션 */}
+      <Paper
+        elevation={1}
+        sx={{
+          p: 2,
+          mb: 2,
+          borderRadius: 3,
+          backgroundColor: 'background.paper',
+          borderLeft: '4px solid',
+          borderColor: 'primary.main'
+        }}
+      >
+        <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip label="NHR" color="primary" size="small" />
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            NHR 형식 파일 처리
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <Tooltip title="NHR 파일 업로드 후 수험번호/지원분야 전처리 (신규)">
+            <Button variant="contained" color="primary" onClick={() => setShowNhrPreprocess(true)}>
+              NHR 전처리
+            </Button>
+          </Tooltip>
+
+          <Tooltip title="원본 NHR 엑셀 업로드 → Step1 시트 분리 → Step2 세로화">
+            <Box>
+              <FileUploader onUpload={handleUpload} />
+            </Box>
+          </Tooltip>
+
+          {(loading || generating) && (
+            <Typography variant="body2" color="text.secondary">
+              {loading ? 'Step1 엑셀 생성 중...' : 'Step2 엑셀 생성 중...'}
+            </Typography>
+          )}
+        </Stack>
+      </Paper>
+
+      {/* ▼ 마이다스 섹션 */}
       <Paper
         elevation={1}
         sx={{
           p: 2,
           mb: 3,
           borderRadius: 3,
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          gap: 1.5,
-          backgroundColor: 'background.paper'
+          backgroundColor: 'background.paper',
+          borderLeft: '4px solid',
+          borderColor: 'secondary.main'
         }}
       >
-        <Tooltip title="NHR 양식으로 가공된 엑셀 파일이 필요할 때 사용">
-          <Button variant="outlined" onClick={() => setOpenNHR(true)}>
-            NHR 형식으로 엑셀 바꾸기
-          </Button>
-        </Tooltip>
-
-        <Tooltip title="원본 엑셀 업로드 (Step1 기준)">
-          <Box>
-            <FileUploader onUpload={handleUpload} />
-          </Box>
-        </Tooltip>
-
-        {/* ✅ 컬럼 병합하기 버튼 */}
-        <Tooltip title="별도 페이지에서 복수 컬럼을 한 컬럼으로 병합">
-          <Button variant="contained" color="primary" onClick={() => setShowColumnMerge(true)}>
-            컬럼 병합하기
-          </Button>
-        </Tooltip>
-
-        {/* ✅ 세로화 도구 버튼 */}
-        <Tooltip title="클릭으로 범위 선택 → 자동 패턴 감지 → 세로화">
-          <Button variant="contained" color="secondary" onClick={() => setShowVerticalTransform(true)}>
-            세로화 도구
-          </Button>
-        </Tooltip>
-
-        <Box sx={{ flexGrow: 1 }} />
-
-        {(loading || generating) && (
-          <Typography variant="body2" color="text.secondary">
-            {loading ? 'Step1 엑셀 생성 중...' : 'Step2 엑셀 생성 중...'}
+        <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Chip label="마이다스" color="secondary" size="small" />
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            마이다스 형식 파일 처리
           </Typography>
-        )}
+        </Box>
+        <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+          <Tooltip title="마이다스 파일 업로드 후 지원분야 전처리 (신규)">
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => setShowMidasPreprocess(true)}
+            >
+              마이다스 전처리
+            </Button>
+          </Tooltip>
+          <Tooltip title="클릭으로 범위 선택 → 자동 패턴 감지 → 세로화">
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => setShowVerticalTransform(true)}
+            >
+              마이다스 세로화
+            </Button>
+          </Tooltip>
+        </Stack>
       </Paper>
+
+      {/* 임시 숨김: NHR 형식으로 엑셀 바꾸기 / 컬럼 병합하기 */}
+      {/*
+      <Button variant="outlined" onClick={() => setOpenNHR(true)}>NHR 형식으로 엑셀 바꾸기</Button>
+      <Button variant="contained" onClick={() => setShowColumnMerge(true)}>컬럼 병합하기</Button>
+      */}
 
       {/* Step1 영역 */}
       {groups.length > 0 && (

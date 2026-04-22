@@ -46,7 +46,7 @@ export default function FileUploader({ onUpload }) {
       }}
     >
       <Button variant="contained" component="label">
-        엑셀 업로드
+        NHR 형식 엑셀 업로드
         <input type="file" hidden accept=".xlsx,.xls,.csv" onChange={handleChange} />
       </Button>
       <Typography variant="caption" display="block" sx={{ mt: 0.5, color: 'text.secondary' }}>

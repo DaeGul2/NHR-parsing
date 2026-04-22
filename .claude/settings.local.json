@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "Bash(CI=true npx react-scripts:*)"
+      "Bash(CI=true npx react-scripts:*)",
+      "Bash(node -e ' *)",
+      "Bash(npm install *)",
+      "Read(//c/tmp/**)",
+      "Read(//c//**)",
+      "Bash(unzip -o -q roundtrip.xlsx -d roundtrip_extracted)",
+      "Read(//c/c/Users/alsxo/Documents/GitHub/NHR-parsing/**)",
+      "Bash(node -e \"const pkg = require\\('exceljs/package.json'\\); console.log\\('main:', pkg.main, 'browser:', pkg.browser, 'exports:', pkg.exports\\);\")",
+      "Bash(rm -f /c/Users/alsxo/Documents/GitHub/NHR-parsing/roundtrip.xlsx /c/Users/alsxo/Documents/GitHub/NHR-parsing/roundtrip_exceljs.xlsx)",
+      "Bash(npm uninstall *)"
     ]
   }
 }
