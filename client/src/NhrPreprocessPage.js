@@ -45,6 +45,24 @@ const cellText = (cell) => {
   return String(v);
 };
 
+// 공통 서브섹션 스타일
+const subSectionSx = {
+  p: 1.5,
+  mb: 1.5,
+  borderRadius: 1.5,
+  border: '1px solid',
+  borderColor: 'divider',
+  backgroundColor: 'action.hover'
+};
+const exampleBoxSx = {
+  mt: 1,
+  p: 1,
+  borderRadius: 1,
+  backgroundColor: 'background.paper',
+  border: '1px dashed',
+  borderColor: 'divider'
+};
+
 // 주소("A1") → {col, row} (모두 1-based)
 const parseAddr = (addr) => {
   const m = addr.match(/^([A-Z]+)(\d+)$/);
@@ -69,6 +87,8 @@ export default function NhrPreprocessPage() {
   const [busy, setBusy] = useState(false);
   const [parseDelimiter, setParseDelimiter] = useState('');
   const [parseMode, setParseMode] = useState('last'); // 'first' | 'last'
+  const [seqDigits, setSeqDigits] = useState(2);
+  const [seqJoin, setSeqJoin] = useState('_');
 
   const origWbRef = useRef(null);
 
@@ -149,7 +169,7 @@ export default function NhrPreprocessPage() {
     setMapping((prev) => {
       const next = {};
       uniqueFields.forEach((f) => {
-        next[f] = prev[f] || { code: '', transformed: '' };
+        next[f] = prev[f] || { code: '', sequenceCode: '', transformed: '' };
       });
       return next;
     });
@@ -166,7 +186,7 @@ export default function NhrPreprocessPage() {
   const handleMapChange = (field, key, value) => {
     setMapping((prev) => ({
       ...prev,
-      [field]: { ...(prev[field] || { code: '', transformed: '' }), [key]: value }
+      [field]: { ...(prev[field] || { code: '', sequenceCode: '', transformed: '' }), [key]: value }
     }));
   };
 
@@ -175,7 +195,7 @@ export default function NhrPreprocessPage() {
       const next = { ...prev };
       uniqueFields.forEach((f, i) => {
         next[f] = {
-          ...(next[f] || { code: '', transformed: '' }),
+          ...(next[f] || { code: '', sequenceCode: '', transformed: '' }),
           code: toExcelCol(i + 1)
         };
       });
@@ -188,12 +208,33 @@ export default function NhrPreprocessPage() {
       const next = { ...prev };
       uniqueFields.forEach((f) => {
         next[f] = {
-          ...(next[f] || { code: '', transformed: '' }),
+          ...(next[f] || { code: '', sequenceCode: '', transformed: '' }),
           transformed: parseField(f, parseDelimiter, parseMode)
         };
       });
       return next;
     });
+  };
+
+  const handleBulkGenerateSequence = () => {
+    setMapping((prev) => {
+      const next = { ...prev };
+      uniqueFields.forEach((f, i) => {
+        next[f] = {
+          ...(next[f] || { code: '', sequenceCode: '', transformed: '' }),
+          sequenceCode: String(i + 1).padStart(seqDigits, '0')
+        };
+      });
+      return next;
+    });
+  };
+
+  // 연번코드 + 조인 + 변환지원분야 조합 (어느 한쪽이 비면 남은 값만)
+  const composeMgmtValue = (seq, transformed) => {
+    const parts = [seq, transformed]
+      .map((p) => String(p ?? '').trim())
+      .filter((p) => p !== '');
+    return parts.join(seqJoin);
   };
 
   const mappingComplete =
@@ -245,13 +286,13 @@ export default function NhrPreprocessPage() {
       // 정렬 + 수험번호 생성
       const enriched = rows.map((r, i) => {
         const field = String(r[fIdx] ?? '');
-        const map = mapping[field] || { code: '', transformed: '' };
+        const map = mapping[field] || { code: '', sequenceCode: '', transformed: '' };
         return {
           origRowNum: rowOrigIdx[i],
           field,
           idNum: r[idIdx],
           code: map.code,
-          transformed: map.transformed
+          mgmtValue: composeMgmtValue(map.sequenceCode, map.transformed)
         };
       });
       const byField = new Map();
@@ -345,7 +386,7 @@ export default function NhrPreprocessPage() {
         copyCellWithValue(
           srcRow.getCell(fCol1),
           outWs.getRow(tgtRowNum).getCell(newMgmtCol1),
-          item.transformed || ''
+          item.mgmtValue || ''
         );
       });
 
@@ -535,89 +576,189 @@ export default function NhrPreprocessPage() {
 
       {uniqueFields.length > 0 && (
         <Paper elevation={1} sx={{ p: 2, mb: 2, borderRadius: 2 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-            3) 지원분야별 코드 / 변환값 매핑
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
+            3) 지원분야별 매핑
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            각 지원분야에 대해 코드(필수)와 변환 후 지원분야(선택)를 입력하세요.
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            4개 단계로 지원분야별 코드 / 연번코드 / 변환값을 지정하고 최종 지원분야_관리용 값을 확인하세요.
           </Typography>
-          <Stack spacing={1} sx={{ mb: 1.5 }}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Typography variant="caption" color="text.secondary">
-                감지된 구분자:
-              </Typography>
-              {detectedDelims.length === 0 && (
-                <Typography variant="caption" color="text.disabled">
-                  (없음)
+
+          {/* ① 변환 지원분야 자동 추출 */}
+          <Box sx={subSectionSx}>
+            <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.25 }}>
+              ① 변환 지원분야 자동 추출
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              구분자를 선택해 원본 지원분야 문자열을 나눈 뒤, <b>앞/뒤</b> 조각을 변환 지원분야로 일괄 채웁니다.
+            </Typography>
+            <Grid container spacing={1.5} alignItems="center">
+              <Grid item xs={12} md="auto">
+                <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+                  감지된 구분자
                 </Typography>
-              )}
-              <ToggleButtonGroup
-                size="small"
-                value={parseDelimiter}
-                exclusive
-                onChange={(_, v) => v !== null && setParseDelimiter(v)}
-              >
-                {detectedDelims.map((d) => (
-                  <ToggleButton key={d.delimiter} value={d.delimiter}>
-                    {d.delimiter}&nbsp;
-                    <Typography component="span" variant="caption" color="text.secondary">
-                      ({d.count}/{uniqueFields.length})
-                    </Typography>
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-              <TextField
-                size="small"
-                label="직접 입력"
-                value={parseDelimiter}
-                onChange={(e) => setParseDelimiter(e.target.value)}
-                sx={{ width: 120 }}
-              />
-              <ToggleButtonGroup
-                size="small"
-                value={parseMode}
-                exclusive
-                onChange={(_, v) => v && setParseMode(v)}
-              >
-                <ToggleButton value="first">앞</ToggleButton>
-                <ToggleButton value="last">뒤</ToggleButton>
-              </ToggleButtonGroup>
-            </Stack>
+                {detectedDelims.length === 0 ? (
+                  <Typography component="span" variant="caption" color="text.disabled">
+                    (감지되지 않음 — 직접 입력 칸에 입력)
+                  </Typography>
+                ) : (
+                  <ToggleButtonGroup
+                    size="small"
+                    value={parseDelimiter}
+                    exclusive
+                    onChange={(_, v) => v !== null && setParseDelimiter(v)}
+                  >
+                    {detectedDelims.map((d) => (
+                      <ToggleButton key={d.delimiter} value={d.delimiter}>
+                        {d.delimiter}&nbsp;
+                        <Typography component="span" variant="caption" color="text.secondary">
+                          ({d.count}/{uniqueFields.length})
+                        </Typography>
+                      </ToggleButton>
+                    ))}
+                  </ToggleButtonGroup>
+                )}
+              </Grid>
+              <Grid item xs={6} md="auto">
+                <TextField
+                  size="small"
+                  label="직접 입력"
+                  value={parseDelimiter}
+                  onChange={(e) => setParseDelimiter(e.target.value)}
+                  sx={{ width: 130 }}
+                />
+              </Grid>
+              <Grid item xs={6} md="auto">
+                <ToggleButtonGroup
+                  size="small"
+                  value={parseMode}
+                  exclusive
+                  onChange={(_, v) => v && setParseMode(v)}
+                >
+                  <ToggleButton value="first">앞 조각</ToggleButton>
+                  <ToggleButton value="last">뒤 조각</ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+              <Grid item xs={12} md="auto">
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={handleBulkTransformFields}
+                  disabled={!parseDelimiter}
+                >
+                  변환 지원분야 일괄 변환
+                </Button>
+              </Grid>
+            </Grid>
+            {uniqueFields[0] && parseDelimiter && (
+              <Box sx={exampleBoxSx}>
+                <Typography variant="caption" color="text.secondary">
+                  예시&nbsp;·&nbsp;원본: <b>"{uniqueFields[0]}"</b>
+                  <br />
+                  → 구분자 <code>{parseDelimiter}</code> 기준 <b>{parseMode === 'first' ? '앞' : '뒤'} 조각</b>:&nbsp;
+                  <b>"{parseField(uniqueFields[0], parseDelimiter, parseMode)}"</b>
+                </Typography>
+              </Box>
+            )}
+          </Box>
+
+          {/* ② 수험번호 코드 (NHR 전용) */}
+          <Box sx={subSectionSx}>
+            <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.25 }}>
+              ② 코드 (수험번호 접두어)
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              각 지원분야에 <b>고유한 알파벳 코드</b>를 지정합니다. 이 코드는 아래 4번 단계에서 숫자와 결합되어 <b>수험번호</b>로 조합됩니다.
+              (예: 코드 "A" + 구분자 없음 + 0000001 → <b>A0000001</b>)
+            </Typography>
             <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Button size="small" variant="outlined" onClick={handleBulkGenerateCodes}>
+              <Button size="small" variant="contained" onClick={handleBulkGenerateCodes}>
                 코드 A~Z 일괄 생성
               </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={handleBulkTransformFields}
-                disabled={!parseDelimiter}
-              >
-                변환 지원분야 일괄 변환
-              </Button>
-              {uniqueFields[0] && parseDelimiter && (
-                <Typography variant="caption" color="text.secondary">
-                  예) "{uniqueFields[0]}" → "{parseField(uniqueFields[0], parseDelimiter, parseMode)}"
-                </Typography>
-              )}
+              <Typography variant="caption" color="text.secondary">
+                각 지원분야 순서대로 A, B, C ... 자동 채움 (26개 초과 시 AA, AB ...).
+              </Typography>
             </Stack>
-          </Stack>
+          </Box>
+
+          {/* ③ 연번코드 & 지원분야_관리용 조합 */}
+          <Box sx={subSectionSx}>
+            <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.25 }}>
+              ③ 연번코드 & 지원분야_관리용 조합
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              최종 <b>지원분야_관리용</b> 값은 <code>연번코드 + 조인구분자 + 변환 지원분야</code> 로 조립됩니다.
+              한쪽이 비어 있으면 구분자 없이 나머지만 출력됩니다. 연번코드는 숫자가 아니어도 되며 매핑 표에서 직접 수정할 수 있습니다.
+            </Typography>
+            <Grid container spacing={1.5} alignItems="center">
+              <Grid item xs={12} md="auto">
+                <Typography variant="caption" color="text.secondary" sx={{ mr: 1 }}>
+                  연번 자릿수
+                </Typography>
+                <ToggleButtonGroup
+                  size="small"
+                  value={seqDigits}
+                  exclusive
+                  onChange={(_, v) => v && setSeqDigits(v)}
+                >
+                  <ToggleButton value={2}>2자리 (기본)</ToggleButton>
+                  <ToggleButton value={3}>3자리</ToggleButton>
+                </ToggleButtonGroup>
+              </Grid>
+              <Grid item xs={6} md="auto">
+                <TextField
+                  size="small"
+                  label="조인 구분자"
+                  value={seqJoin}
+                  onChange={(e) => setSeqJoin(e.target.value)}
+                  sx={{ width: 130 }}
+                  helperText="기본 '_'"
+                />
+              </Grid>
+              <Grid item xs={6} md="auto">
+                <Button size="small" variant="contained" onClick={handleBulkGenerateSequence}>
+                  연번코드 일괄 생성
+                </Button>
+              </Grid>
+            </Grid>
+            <Box sx={exampleBoxSx}>
+              <Typography variant="caption" color="text.secondary">
+                예시&nbsp;·&nbsp;연번 <b>{String(1).padStart(seqDigits, '0')}</b>
+                &nbsp;+&nbsp;조인 <code>{seqJoin || '(없음)'}</code>
+                &nbsp;+&nbsp;변환값 <b>"{uniqueFields[0] && parseDelimiter ? parseField(uniqueFields[0], parseDelimiter, parseMode) : '변환값'}"</b>
+                <br />
+                → 지원분야_관리용: <b>"{composeMgmtValue(String(1).padStart(seqDigits, '0'), uniqueFields[0] && parseDelimiter ? parseField(uniqueFields[0], parseDelimiter, parseMode) : '변환값')}"</b>
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* ④ 매핑 테이블 */}
+          <Typography variant="body2" sx={{ fontWeight: 700, mt: 2, mb: 0.5 }}>
+            ④ 매핑 확인 / 직접 수정
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            위에서 일괄 채운 값을 행 단위로 확인·수정하세요. 마지막 열은 현재 설정 기준 최종 출력값 미리보기입니다.
+          </Typography>
           <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 700 }}>원본 지원분야</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>코드</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>연번코드</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>변환 지원분야</TableCell>
+                <TableCell sx={{ fontWeight: 700 }}>최종 지원분야_관리용</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {uniqueFields.map((f) => {
                 const code = (mapping[f]?.code || '').trim();
                 const isDup = code !== '' && duplicateCodes.includes(code);
+                const seq = mapping[f]?.sequenceCode || '';
+                const trans = mapping[f]?.transformed || '';
+                const preview = composeMgmtValue(seq, trans);
                 return (
                   <TableRow key={f}>
                     <TableCell>{f}</TableCell>
-                    <TableCell sx={{ width: 140 }}>
+                    <TableCell sx={{ width: 110 }}>
                       <TextField
                         size="small"
                         value={mapping[f]?.code || ''}
@@ -628,6 +769,15 @@ export default function NhrPreprocessPage() {
                         helperText={isDup ? '중복 코드' : ''}
                       />
                     </TableCell>
+                    <TableCell sx={{ width: 110 }}>
+                      <TextField
+                        size="small"
+                        value={mapping[f]?.sequenceCode || ''}
+                        onChange={(e) => handleMapChange(f, 'sequenceCode', e.target.value)}
+                        placeholder="예: 01"
+                        fullWidth
+                      />
+                    </TableCell>
                     <TableCell>
                       <TextField
                         size="small"
@@ -636,6 +786,9 @@ export default function NhrPreprocessPage() {
                         onChange={(e) => handleMapChange(f, 'transformed', e.target.value)}
                         placeholder="변환 후 표시될 지원분야"
                       />
+                    </TableCell>
+                    <TableCell sx={{ color: 'text.secondary', fontSize: 12 }}>
+                      {preview || <em>(비어 있음)</em>}
                     </TableCell>
                   </TableRow>
                 );
@@ -659,6 +812,9 @@ export default function NhrPreprocessPage() {
             <Box>
               <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>자릿수</Typography>
               <ToggleButtonGroup size="small" value={digits} exclusive onChange={(_, v) => v && setDigits(v)}>
+                <ToggleButton value={3}>3자리</ToggleButton>
+                <ToggleButton value={4}>4자리</ToggleButton>
+                <ToggleButton value={5}>5자리</ToggleButton>
                 <ToggleButton value={6}>6자리</ToggleButton>
                 <ToggleButton value={7}>7자리 (기본)</ToggleButton>
               </ToggleButtonGroup>
